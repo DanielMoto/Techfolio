@@ -56,33 +56,12 @@ returnstd = pd.DataFrame(scaler.fit_transform(returns), index=returns.index, col
 # Initialize an empty list 'W' to store subsets of 'returns_std'
 W = []
 
-# Loop over t from 0 to 139 (inclusive)
-for t in range(140):  # In Python, range(140) generates numbers from 0 to 139
-    # For each t, calculate the starting and ending indices for the window
-    start_row = t * 21
-    end_row = 250 + t * 21
-    
-    # Extract the subset of 'returns_std'
-    # - 'iloc' is used for integer-location based indexing
-    # - We extract rows from 'start_row' to 'end_row - 1' (since 'end_row' is exclusive in Python slicing)
-    # - ':' indicates all columns
-    "QUI SCEGLIERE SE USARE RETURNS O RETURNSTD, QUIDNI SE APPLICARE O MENO MINMAXSACALER"
-    #subset = returnstd.iloc[start_row:end_row, :]
-    subset = returns.iloc[start_row:end_row, :]
-    # Append the subset to the list 'W'
-    W.append(subset)
+# Initialize an empty list 'W' to store subsets of 'returns_std'
+W = []
+WINDOW = 250
+SHIFT = 21
+W = [returnstd.iloc[i*SHIFT : i*SHIFT + WINDOW] for i in range(140)]
 
-# Now, 'W' is a list of 140 DataFrames, each containing a subset of 'returns_std'
-# Each subset is a rolling window of 
-"size 250, shifting by 21 rows"
-with pd.ExcelWriter('matrices_output.xlsx') as writer:
-# Iterate through the list of matrices
-    for i, matrix in enumerate(W):
-        # Convert each matrix to a DataFrame
-        df = pd.DataFrame(matrix)
-        # Save to a separate sheet named 'Sheet1', 'Sheet2', etc.
-        df.to_excel(writer, sheet_name=f'Sheet{i+1}', index=False, header=False)
-        
         
         
 # Verify the result to ensure windows overlap correctly
