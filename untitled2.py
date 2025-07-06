@@ -53,8 +53,8 @@ for t in range(len(W)):
     eigvecs = eigenvec_C[t]
     
     # Ricostruisci matrice diagonale con autovalori filtrati
-    D = np.diag(eigvals[::-1])  # attenzione: reverse perché autovalori sono crescenti
-    V = eigvecs[:, ::-1]        # stessi indici (autovalori più grandi per primi)
+    D = np.diag(eigvals)  # attenzione: reverse perché autovalori sono crescenti
+    V = eigvecs       # stessi indici (autovalori più grandi per primi)
     
     C_filt = V @ D @ V.T
     np.fill_diagonal(C_filt, 1)  # imposta la diagonale a 1
@@ -123,6 +123,10 @@ for t, el in enumerate(links2):
 
     # 3.4 Centralità (eigenvector)
     cent = nx.eigenvector_centrality_numpy(mst)
+    if len(cent):
+        max_c = max(cent.values())
+        if max_c != 0:
+            cent = {k: v / max_c for k, v in cent.items()}
     centralities.append(cent)
 
     # 3.5 Matrice di “ridondanza”
@@ -250,7 +254,7 @@ for mst in msts:
     # eigenvector centrality
     cent = nx.eigenvector_centrality_numpy(mst)
     arr = np.array([cent[n] for n in ids]).reshape(-1, 1)
-    eigencent.append(-arr)  # negativo come in R
+    eigencent.append(arr)  # negativo come in R
 
     # betweenness centrality (non normalizzata)
     bdict = nx.betweenness_centrality(mst, normalized=False)
@@ -416,7 +420,7 @@ def solve_portfolio_gamma(COV, x, r_vec, target_ret, gamma):
     n = COV.shape[0]
     # 1) QP matrices
     P = matrix(COV)                            # shape n×n
-    q = matrix(-gamma * x)                      # shape n×1
+    q = matrix(gamma * x)                      # shape n×1
 
     # 2) Equality: sum_i w_i = 1
     A = matrix(np.ones((1, n)))
@@ -461,18 +465,15 @@ for gamma in gamma_list:
 
     # 2) out‐of‐sample daily returns
     daily_list = []
-    for t, w in enumerate(weights):
-        # compute the 21 daily log‐returns for window t
-       ret = W_out[t].values.dot(w)   # shape (21,)
-       # subtract a flat 0.001 on the first day only
-       ret[0] -= cost_rate
-       daily_list.append(ret)
+    for t, w in enumerate(weights):          # stesso ciclo delle W_out
+        daily_list.extend(W_out[t].index)   # 21 date per ogni finestra
 
-     # --- wealth compounding & monthly index --------------------------
-    monthly_log = np.array([month.sum() for month in daily_list])       # 140×1
-    wealth      = np.exp(np.cumsum(monthly_log))                       # start = 1
-    cum_pct     = (wealth - 1.0) * 100                                 # % P&L
-    cum_returns[gamma] = pd.Series(cum_pct, index=cri)   # cri = 140 dates
+        # ora daily_dates ha la stessa lunghezza di `daily`
+        daily = np.concatenate(daily_list)       # ≈ 3000 valori
+        wealth = np.exp(np.cumsum(daily))
+        cum_pct = (wealth - 1)*100
+
+        cum_returns[gamma] = pd.Series(cum_pct, index=daily_list)
 # 3) Plot exactly Figure 6 for all gamma
 
 plt.figure(figsize=(12,6))
@@ -485,20 +486,6 @@ plt.legend(ncol=2, loc="upper left")
 plt.grid(True)
 plt.tight_layout()
 plt.show() 
-
-
-plt.figure(figsize=(12,6))
-for γ, ser in cum_returns.items():
-    plt.plot(ser.index, ser.values, lw=2, label=f"γ = {γ}")
-plt.ylabel("P&L percentage")
-plt.xlabel("time")
-plt.legend(ncol=2, frameon=False)
-plt.title("Profit & Loss (compounded, 10 bps per rebalance)")
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-
 
 
 
